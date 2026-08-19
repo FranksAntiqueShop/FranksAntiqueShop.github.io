@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE FRANK | 매장 관리 도구</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-accent">Frank’s Antique Shop</span>
+            </div>
+            <p class="subtitle">매장 운영 지원 자동화 도구</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Section 1: 예약 문자 제작 -->
+            <section class="card">
+                <div class="card-header">
+                    <div class="badge">RESERVATION</div>
+                    <h2>예약 문자 제작</h2>
+                </div>
+                <p class="card-desc">붙여넣으면 <strong>전화번호가 먼저 자동 복사</strong>됩니다.</p>
+                <div class="input-group">
+                    <textarea 
+                        id="reservationInput" 
+                        class="custom-textarea compact" 
+                        placeholder="예약 행 붙여넣기 (Ctrl+V)"
+                        spellcheck="false"
+                    ></textarea>
+                </div>
+
+                <!-- 단계별 복사 상태 카드 -->
+                <div id="stepContainer" class="step-container hidden">
+                    <div class="step-info">
+                        <span id="targetCustomer" class="step-customer">홍길동님</span>
+                        <span id="targetPhone" class="step-phone">010-0000-0000 (번호 복사됨)</span>
+                    </div>
+                    <button id="btnCopyMsg" class="btn-action">
+                        <span>문자 본문 복사하기</span>
+                        <kbd class="key-badge">Space</kbd>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Section 2: 정산 보고 제작 -->
+            <section class="card">
+                <div class="card-header">
+                    <div class="badge badge-accent">REPORT</div>
+                    <h2>정산 보고 제작</h2>
+                </div>
+                <p class="card-desc">정산 관련 행 데이터를 붙여넣어 주세요.</p>
+                <div class="input-group">
+                    <textarea 
+                        id="settlementInput" 
+                        class="custom-textarea compact" 
+                        placeholder="정산 데이터 한 행을 붙여넣으세요..."
+                        spellcheck="false"
+                    ></textarea>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <span>THE FRANK Auto Assistant</span>
+        </footer>
+    </div>
+
+    <!-- 토스트 알림창 -->
+    <div id="toast" class="toast">알림</div>
+
+    <script src="script.js"></script>
+</body>
+</html>
