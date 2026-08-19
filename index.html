@@ -1,96 +1,97 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>텍스트 입력 도구</title>
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>프랭크 도구 모음</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="logo">
-                <span class="logo-accent">Frank’s Antique Shop</span>
+  <div class="app-container">
+    <header class="header">
+      <div class="brand">
+        <div class="brand-text">
+          <h1>Frank's Antique Shop</h1>
+          <span class="subtitle">텍스트 입력 도구</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <!-- 퀵 툴: 북마크릿 생성기 (좌: 버튼, 우: 2단 설정) -->
+      <section class="card quick-tool-card">
+        <div class="quick-tool-grid">
+          <div class="quick-left">
+            <div class="card-header">
+              <span class="badge">QUICK TOOL</span>
+              <h2>관리자 페이지 원클릭 버튼 등록</h2>
             </div>
-            <p class="subtitle">텍스트 입력 도구</p>
-        </header>
+            <p class="desc">
+              아래 노란색 버튼을 마우스로 끌어서 <strong>크롬 북마크 바</strong>에 넣어두세요.
+            </p>
+            <div class="bookmark-btn-wrap">
+              <a id="bookmarkletLink" href="#" class="bookmark-btn">⭐ 프랭크 문자 버튼 생성기</a>
+            </div>
+          </div>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Section 0: 관리자 페이지 퀵 버튼 설치 (추가) -->
-            <section class="card" style="border-color: var(--accent);">
-                <div class="card-header">
-                    <div class="badge badge-accent">QUICK TOOL</div>
-                    <h2>관리자 페이지 원클릭 버튼 등록</h2>
-                </div>
-                <p class="card-desc">아래 노란색 버튼을 마우스로 끌어서 <strong>브라우저 북마크 바</strong>에 넣어두세요.</p>
-                <div style="text-align: center; padding: 10px 0;">
-                    <a id="bookmarkletLink" class="btn-action" style="display: inline-flex; text-decoration: none;" href="#">
-                        <span>⭐ 프랭크 문자 버튼 생성기</span>
-                    </a>
-                </div>
-            </section>
-            <!-- Section 1: 예약 문자 제작 -->
-            <section class="card">
-                <div class="card-header">
-                    <div class="badge">RESERVATION</div>
-                    <h2>예약 문자 제작</h2>
-                </div>
-                <p class="card-desc"><strong>엑셀 행 추가 방식</strong> 그대로 복사 후 붙일 시 전화번호 먼저 추출</p>
-                <div class="input-group">
-                    <textarea 
-                        id="reservationInput" 
-                        class="custom-textarea compact" 
-                        placeholder="예약 사이트에서 행 붙여넣기 (Ctrl+V)"
-                        spellcheck="false"
-                    ></textarea>
-                </div>
+          <div class="quick-right-settings">
+            <div class="input-field-group">
+              <label for="workerNameInput">현재 근무자</label>
+              <input type="text" id="workerNameInput" placeholder="이름" value="프랭크" autocomplete="off" />
+            </div>
+            <div class="input-field-group">
+              <label for="depositDateInput">입금 일자</label>
+              <input type="date" id="depositDateInput" />
+            </div>
+          </div>
+        </div>
+      </section>
 
-                <!-- 단계별 복사 상태 카드 -->
-                <div id="stepContainer" class="step-container hidden">
-                    <div class="step-info">
-                        <span id="targetCustomer" class="step-customer">홍길동님</span>
-                        <span id="targetPhone" class="step-phone">010-0000-0000 (번호 복사됨)</span>
-                    </div>
-                    <button id="btnCopyMsg" class="btn-action">
-                        <span>문자 본문 복사하기</span>
-                        <kbd class="key-badge">Space</kbd>
-                    </button>
-                </div>
-            </section>
+      <!-- 예약 문자 제작 -->
+      <section class="card">
+        <div class="card-header">
+          <span class="badge">RESERVATION</span>
+          <h2>예약 문자 제작</h2>
+        </div>
+        <p class="desc">엑셀 행 추가 방식 그대로 복사 후 붙일 시 전화번호 먼저 추출</p>
+        
+        <div class="input-wrap">
+          <textarea id="reservationInput" rows="2" placeholder="예약 사이트에서 행 붙여넣기 (Ctrl+V)"></textarea>
+        </div>
 
-            <!-- Section 2: 정산 보고 제작 -->
-            <section class="card">
-                <div class="card-header">
-                    <div class="badge badge-accent">REPORT</div>
-                    <h2>정산 보고 제작</h2>
-                </div>
-                <p class="card-desc">엑셀에서 "가격   굿즈   할인   총 금액   카드   계좌   예약금   받은 금액" 행을 복사 후 붙이기</p>
-                <div class="input-group">
-                    <textarea 
-                        id="settlementInput" 
-                        class="custom-textarea compact" 
-                        placeholder="정산 데이터 한 행을 붙여넣으세요..."
-                        spellcheck="false"
-                    ></textarea>
-                </div>
-            </section>
-        </main>
+        <div id="stepContainer" class="step-card hidden">
+          <div class="step-info">
+            <div class="info-row">
+              <strong id="targetCustomer">-</strong>
+            </div>
+            <div class="info-row">
+              <span id="targetPhone" class="info-value text-muted">-</span>
+            </div>
+          </div>
+          <button id="btnCopyMsg" class="action-btn">문자 본문 복사하기 Space</button>
+        </div>
+      </section>
 
-        <!-- Footer -->
-        <footer class="footer">
-            <span>Frank’s Auto Assistant</span>
-        </footer>
-    </div>
+      <!-- 정산 보고 제작 -->
+      <section class="card">
+        <div class="card-header">
+          <span class="badge">REPORT</span>
+          <h2>정산 보고 제작</h2>
+        </div>
+        <p class="desc">엑셀에서 "가격 굿즈 할인 총 금액 카드 계좌 예약금 받은 금액" 행을 복사 후 붙이기</p>
+        
+        <div class="input-wrap">
+          <textarea id="settlementInput" rows="2" placeholder="정산 데이터 한 행을 붙여넣으세요..."></textarea>
+        </div>
+      </section>
+    </main>
 
-    <!-- 토스트 알림창 -->
-    <div id="toast" class="toast">알림</div>
+    <div id="toast" class="toast"></div>
+  </div>
 
-    <script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
