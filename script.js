@@ -170,7 +170,7 @@ function generateBookmarkletScript(workerName, depositMMDD) {
                 ');' +
             '}' +
 
-            '/* 전역 Queue 관리 (100건 연속 클릭 완벽 순차 처리) */' +
+            '/* 전역 Queue 관리 (순차 보장) */' +
             'if (!window.__frankConfirmQueue) window.__frankConfirmQueue = [];' +
             'if (typeof window.__frankConfirmRunning === "undefined") window.__frankConfirmRunning = false;' +
 
@@ -185,7 +185,7 @@ function generateBookmarkletScript(workerName, depositMMDD) {
                 'var next = function(){' +
                     'window.__frankConfirmRunning = false;' +
                     'if (window.__frankConfirmQueue.length > 0) {' +
-                        'setTimeout(runQueue, 350);' +
+                        'setTimeout(runQueue, 300);' +
                     '}' +
                 '};' +
 
@@ -215,24 +215,24 @@ function generateBookmarkletScript(workerName, depositMMDD) {
                 'var $remainPriceCell = $row.find("td").eq(15);' +
                 'var $memoCell = $row.find("td").eq(17);' +
 
-                'var nameLink = $row.find("td").eq(7).find("a").attr("href") || "";' +
-                'var revCode = "";' +
-                'var codeParts = nameLink.split("\'");' +
-                'if (codeParts.length >= 2) revCode = codeParts[1];' +
-
-                'var $wrap = $(' +
-                    '"<div class=\\"quick-tool-wrap\\" style=\\"display:flex;justify-content:center;gap:4px;\\"></div>"' +
-                ');' +
-
-                'var $btnConfirm = $(' +
-                    '"<button type=\\"button\\" class=\\"btn btn-minier btn-success\\" style=\\"font-weight:bold;padding:2px 6px;\\">✔ 확정</button>"' +
-                ');' +
+                'var $wrap = $(\'<div class="quick-tool-wrap" style="display:flex;justify-content:center;gap:4px;"></div>\');' +
+                'var $btnConfirm = $(\'<button type="button" class="btn btn-minier btn-success" style="font-weight:bold;padding:2px 6px;">✔ 확정</button>\');' +
 
                 '$btnConfirm.on("click", function(e){' +
                     'e.preventDefault();' +
                     'e.stopPropagation();' +
 
-                    'if (!revCode) {' +
+                    '/* 클릭 시점에 해당 행의 링크에서 실시간으로 코드 추출 */' +
+                    'var currentNameLink = $row.find("td").eq(7).find("a").attr("href") || "";' +
+                    'var targetRevCode = "";' +
+                    'var match = currentNameLink.match(/fun_rev_update\\([\'"]([^\'"]+)[\'"]\\)/);' +
+                    'if (match) { targetRevCode = match[1]; }' +
+                    'else {' +
+                        'var codeParts = currentNameLink.split("\'");' +
+                        'if (codeParts.length >= 2) targetRevCode = codeParts[1];' +
+                    '}' +
+
+                    'if (!targetRevCode) {' +
                         'alert("예약 코드를 찾을 수 없습니다.");' +
                         'return;' +
                     '}' +
@@ -249,207 +249,92 @@ function generateBookmarkletScript(workerName, depositMMDD) {
                     '$btnConfirm.prop("disabled", true).text("대기중..");' +
 
                     'window.__frankConfirmQueue.push(function(nextJob){' +
-                        '$btnConfirm.text("기입중..");' +
-                        'var ifr = document.createElement("iframe");' +
-                        'ifr.name = "confirm_frame_" + Date.now() + "_" + Math.floor(Math.random()*1000000);' +
-                        'ifr.style.position = "absolute";' +
-                        'ifr.style.width = "1px";' +
-                        'ifr.style.height = "1px";' +
-                        'ifr.style.top = "-9999px";' +
-                        'ifr.style.left = "-9999px";' +
-                        'ifr.style.border = "0";' +
-                        'ifr.style.visibility = "hidden";' +
-                        'document.body.appendChild(ifr);' +
+                        '$btnConfirm.text("저장중..");' +
 
-                        'var completed = false;' +
-                        'var cleanup = function(){' +
-                            'setTimeout(function(){' +
-                                'if (ifr && ifr.parentNode) ifr.parentNode.removeChild(ifr);' +
-                            '}, 300);' +
-                        '};' +
+                        '/* 1단계: 팝업 HTML 로드 */' +
+                        'fetch("rev.update.php?code=" + encodeURIComponent(targetRevCode) + "&_ts=" + Date.now() + "_" + Math.random(), {' +
+                            'credentials: "include",' +
+                            'cache: "no-store"' +
+                        '})' +
+                        '.then(function(res){' +
+                            'if (!res.ok) throw new Error("팝업 정보 로드 실패");' +
+                            'return res.text();' +
+                        '})' +
+                        '.then(function(htmlText){' +
+                            'var parser = new DOMParser();' +
+                            'var doc = parser.parseFromString(htmlText, "text/html");' +
+                            'var form = doc.register || doc.forms["register"] || doc.querySelector("form[action*=\'rev.act.php\']");' +
 
-                        'var fail = function(msg){' +
-                            'alert(msg);' +
-                            '$btnConfirm.prop("disabled", false).text("✔ 확정");' +
-                            'cleanup();' +
-                            'nextJob();' +
-                        '};' +
+                            'if (!form) throw new Error("수정 폼을 파싱할 수 없습니다.");' +
 
-                        'var success = function(){' +
-                            'if (completed) return;' +
-                            'completed = true;' +
+                            '/* 2단계: URLSearchParams를 사용하여 표준 urlencoded 포맷 구성 */' +
+                            'var params = new URLSearchParams();' +
+                            'var inputs = form.querySelectorAll("input, select, textarea");' +
 
+                            'inputs.forEach(function(el){' +
+                                'if (!el.name) return;' +
+                                'if (el.type === "radio" || el.type === "checkbox") {' +
+                                    'if (el.checked) params.append(el.name, el.value);' +
+                                '} else {' +
+                                    'params.append(el.name, el.value);' +
+                                '}' +
+                            '});' +
+
+                            '/* 3단계: 정확한 확정 데이터 덮어쓰기 */' +
+                            'var targetPrice = rowPrice.replace(/[^0-9]/g, "") || "56000";' +
+                            'var priceInput = form.querySelector("input[name=\'price\']");' +
+                            'if (priceInput && priceInput.value) {' +
+                                'targetPrice = priceInput.value.replace(/[^0-9]/g, "") || targetPrice;' +
+                            '}' +
+
+                            'params.set("gubun", "B");' +
+                            'params.set("pay_price", String(Number(targetPrice)));' +
+                            'params.set("price", String(Number(targetPrice)));' +
+                            'params.set("dc_price", "0");' +
+                            'params.set("admin_memo", autoMemo);' +
+                            'params.set("act", "update");' +
+                            'params.set("code", targetRevCode);' +
+
+                            '/* 4단계: rev.act.php로 urlencoded 전송 (서버 DB 완벽 반영) */' +
+                            'return fetch("rev.act.php", {' +
+                                'method: "POST",' +
+                                'headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },' +
+                                'body: params.toString(),' +
+                                'credentials: "include",' +
+                                'cache: "no-store"' +
+                            '});' +
+                        '})' +
+                        '.then(function(res){' +
+                            'if (!res.ok) throw new Error("저장 서버 응답 오류");' +
+                            'return res.text();' +
+                        '})' +
+                        '.then(function(responseText){' +
+                            'var cleanRes = (responseText || "").replace(/\\s+/g, "");' +
+                            'if (cleanRes.indexOf("수정에러") !== -1 || cleanRes.indexOf("수정오류") !== -1) {' +
+                                'throw new Error("서버에서 수정 실패 응답을 반환했습니다.");' +
+                            '}' +
+
+                            '/* UI 완료 처리 */' +
                             '$statusCell.html("<font color=\\"#009900\\">예약금</font>");' +
                             '$revPriceCell.text(rowPrice);' +
                             '$remainPriceCell.text("0");' +
                             '$memoCell.attr("title", autoMemo).text(name + " ..");' +
 
-                            '$btnConfirm' +
-                                '.removeClass("btn-success")' +
-                                '.addClass("btn-default")' +
-                                '.text("확정됨")' +
-                                '.prop("disabled", true);' +
-
-                            'cleanup();' +
+                            '$btnConfirm.removeClass("btn-success").addClass("btn-default").text("확정됨").prop("disabled", true);' +
                             'nextJob();' +
-                        '};' +
-
-                        'ifr.onload = function(){' +
-                            'try {' +
-                                'var win = ifr.contentWindow;' +
-                                'var doc = ifr.contentDocument || win.document;' +
-
-                                '/* 1. 테마요금 */' +
-                                'var themePrice = "";' +
-                                'var cells = doc.querySelectorAll("th,td");' +
-                                'for (var i = 0; i < cells.length; i++) {' +
-                                    'var txt = (cells[i].textContent || "").replace(/\\s+/g,"");' +
-                                    'if (txt.indexOf("테마요금") !== -1) {' +
-                                        'var nextCell = cells[i].nextElementSibling;' +
-                                        'if (nextCell) {' +
-                                            'var ti = nextCell.querySelector("input");' +
-                                            'if (ti && ti.value) {' +
-                                                'themePrice = ti.value.trim();' +
-                                                'break;' +
-                                            '}' +
-                                        '}' +
-                                    '}' +
-                                '}' +
-                                'if (!themePrice) themePrice = rowPrice.replace(/[^0-9]/g,"");' +
-
-                                '/* 2. 예약금 라디오 */' +
-                                'var radios = doc.querySelectorAll("input[type=\\"radio\\"]");' +
-                                'var reservationRadio = null;' +
-                                'for (var r = 0; r < radios.length; r++) {' +
-                                    'var radioText = ((radios[r].nextSibling ? radios[r].nextSibling.textContent : "") + (radios[r].parentElement ? radios[r].parentElement.textContent : "")).replace(/\\s+/g,"");' +
-                                    'if (radios[r].value === "B" || radioText.indexOf("예약금") !== -1) {' +
-                                        'reservationRadio = radios[r];' +
-                                        'break;' +
-                                    '}' +
-                                '}' +
-                                'if (!reservationRadio) {' +
-                                    'fail("예약금 라디오 버튼을 찾지 못했습니다.");' +
-                                    'return;' +
-                                '}' +
-
-                                'for (var rs = 0; rs < radios.length; rs++) radios[rs].checked = false;' +
-                                'reservationRadio.checked = true;' +
-                                'try { reservationRadio.click(); } catch(e){}' +
-                                'reservationRadio.checked = true;' +
-                                'try { reservationRadio.dispatchEvent(new Event("change",{bubbles:true})); } catch(e){}' +
-
-                                '/* 3. 결제금액 타겟팅 */' +
-                                'var payInput = null;' +
-                                'for (var p = 0; p < cells.length; p++) {' +
-                                    'var ptxt = (cells[p].textContent || "").replace(/\\s+/g,"");' +
-                                    'if (ptxt === "결제(예약)금액" || (ptxt.indexOf("결제") !== -1 && ptxt.indexOf("금액") !== -1 && ptxt.indexOf("할인") === -1)) {' +
-                                        'var pn = cells[p].nextElementSibling;' +
-                                        'if (pn) {' +
-                                            'var pi = pn.querySelector("input[type=\\"text\\"],input:not([type]),input[type=\\"number\\"]");' +
-                                            'if (pi) { payInput = pi; break; }' +
-                                        '}' +
-                                    '}' +
-                                '}' +
-                                'if (!payInput) {' +
-                                    'payInput = doc.querySelector("input[name=\'pay_price\'], input[name=\'rev_price\'], input[name*=\'pay\']");' +
-                                '}' +
-                                'if (!payInput) {' +
-                                    'fail("결제(예약)금액 입력칸을 찾지 못했습니다.");' +
-                                    'return;' +
-                                '}' +
-
-                                'payInput.value = themePrice;' +
-                                'try {' +
-                                    'payInput.dispatchEvent(new Event("input",{bubbles:true}));' +
-                                    'payInput.dispatchEvent(new Event("change",{bubbles:true}));' +
-                                    'payInput.dispatchEvent(new Event("keyup",{bubbles:true}));' +
-                                '} catch(e){}' +
-                                'try {' +
-                                    'if (win.jQuery) win.jQuery(payInput).val(themePrice).trigger("input").trigger("change").trigger("keyup");' +
-                                '} catch(e){}' +
-
-                                '/* 4. 메모 타겟팅 */' +
-                                'var memoEl = doc.querySelector("textarea[name=\'memo\'], textarea[name*=\'memo\']") || doc.querySelector("textarea");' +
-                                'if (memoEl) {' +
-                                    'memoEl.value = autoMemo;' +
-                                    'try {' +
-                                        'memoEl.dispatchEvent(new Event("input",{bubbles:true}));' +
-                                        'memoEl.dispatchEvent(new Event("change",{bubbles:true}));' +
-                                    '} catch(e){}' +
-                                    'try {' +
-                                        'if (win.jQuery) win.jQuery(memoEl).val(autoMemo).trigger("input").trigger("change");' +
-                                    '} catch(e){}' +
-                                '}' +
-
-                                '/* 5. 폼 검증 & 금액 정제 */' +
-                                'var form = doc.register || (doc.forms && doc.forms[0] ? doc.forms[0] : null);' +
-                                'if (!form) {' +
-                                    'fail("예약 수정 폼을 찾지 못했습니다.");' +
-                                    'return;' +
-                                '}' +
-
-                                'if (form.name && form.name.value === "") { fail("예약자명을 입력하세요."); return; }' +
-                                'if (form.mobile1 && form.mobile1.value === "") { fail("연락처를 입력하세요."); return; }' +
-                                'if (form.mobile2 && form.mobile2.value === "") { fail("연락처를 입력하세요."); return; }' +
-                                'if (form.mobile3 && form.mobile3.value === "") { fail("연락처를 입력하세요."); return; }' +
-
-                                'if (form.price) {' +
-                                    'try { form.price.value = Number(win.fun_only_number(form.price.value)); }' +
-                                    'catch(e){ form.price.value = Number(String(form.price.value).replace(/[^0-9-]/g,"")); }' +
-                                '}' +
-                                'if (form.pay_price) {' +
-                                    'try { form.pay_price.value = Number(win.fun_only_number(form.pay_price.value)); }' +
-                                    'catch(e){ form.pay_price.value = Number(String(form.pay_price.value).replace(/[^0-9-]/g,"")); }' +
-                                '}' +
-                                'if (form.dc_price) {' +
-                                    'try { form.dc_price.value = Number(win.fun_only_number(form.dc_price.value)); }' +
-                                    'catch(e){ form.dc_price.value = Number(String(form.dc_price.value).replace(/[^0-9-]/g,"")); }' +
-                                '}' +
-
-                                '/* 6. fetch 백그라운드 전송 */' +
-                                '$btnConfirm.text("저장중..");' +
-                                'var fd = new FormData(form);' +
-                                'fd.set("act", "update");' +
-
-                                'var actionUrl = form.getAttribute("action") || "rev.act.php";' +
-                                'actionUrl = new URL(actionUrl, location.href).href;' +
-
-                                'fetch(actionUrl, {' +
-                                    'method: "POST",' +
-                                    'body: fd,' +
-                                    'credentials: "include",' +
-                                    'cache: "no-store"' +
-                                '})' +
-                                '.then(function(res){' +
-                                    'if (!res || !res.ok) throw new Error("서버 저장 실패 HTTP " + (res ? res.status : "???"));' +
-                                    'return res.text();' +
-                                '})' +
-                                '.then(function(resultText){' +
-                                    'var responseText = (resultText || "").replace(/\\s+/g,"");' +
-                                    'if (responseText.indexOf("수정에러") !== -1 || responseText.indexOf("수정오류") !== -1) {' +
-                                        'throw new Error("서버에서 수정 실패 응답을 반환했습니다.");' +
-                                    '}' +
-                                    'success();' +
-                                '})' +
-                                '.catch(function(err){' +
-                                    'fail("확정 저장 중 오류: " + err.message);' +
-                                '});' +
-
-                            '} catch(err) {' +
-                                'fail("확정 처리 중 오류: " + err.message);' +
-                            '}' +
-                        '};' +
-
-                        'ifr.src = "rev.update.php?code=" + encodeURIComponent(revCode) + "&_ts=" + Date.now() + "_" + Math.random();' +
+                        '})' +
+                        '.catch(function(err){' +
+                            'alert("확정 실패: " + err.message);' +
+                            '$btnConfirm.prop("disabled", false).text("✔ 확정");' +
+                            'nextJob();' +
+                        '});' +
                     '});' +
 
                     'runQueue();' +
                 '});' +
 
                 '/* ================= 문자 버튼 (원문 100% 보존 복구) ================= */' +
-                'var $btnMsg = $(' +
-                    '"<button type=\\"button\\" class=\\"btn btn-minier btn-warning\\" style=\\"font-weight:bold;padding:2px 6px;\\">✉ 문자</button>"' +
-                ');' +
+                'var $btnMsg = $(\'<button type="button" class="btn btn-minier btn-warning" style="font-weight:bold;padding:2px 6px;">✉ 문자</button>\');' +
 
                 '$btnMsg.on("click", function(e){' +
                     'e.preventDefault();' +
@@ -488,6 +373,8 @@ function generateBookmarkletScript(workerName, depositMMDD) {
         '}' +
     '})();';
 }
+
+
 // ================= 이벤트 리스너 & 컨트롤러 연동 =================
 document.addEventListener('DOMContentLoaded', () => {
     const reservationInput = document.getElementById('reservationInput');
